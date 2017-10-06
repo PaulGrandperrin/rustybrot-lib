@@ -6,7 +6,7 @@ use rand::Rng;
 use num::Complex;
 use std::cmp::Ordering;
 use rand::distributions::normal::StandardNormal;
-
+use num::{Float, NumCast};
 
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
@@ -18,21 +18,21 @@ mod errors {
     - better fitness and sampling functions for metropolis
 */
 
-pub fn fit_to_ratio(ratio: f32, x_min: &mut f32, x_max: &mut f32, y_min: &mut f32, y_max: &mut f32) -> Result<()> {
+pub fn fit_to_ratio<F: Float>(ratio: F, x_min: &mut F, x_max: &mut F, y_min: &mut F, y_max: &mut F) -> Result<()> {
     let view_ratio = (*x_max - *x_min) / (*y_max - *y_min);
 
     match ratio.partial_cmp(&view_ratio).chain_err(|| "problem with view and/or screen coordinates")? {
         Ordering::Less => {
             let diff_y = (*y_max - *y_min) / ratio;
-            let center_y = (*y_max - *y_min) / 2.0 + *y_min;
-            *y_min = center_y - diff_y / 2.0;
-            *y_max = center_y + diff_y / 2.0;
+            let center_y = (*y_max - *y_min) / NumCast::from(2).unwrap() + *y_min;
+            *y_min = center_y - diff_y / NumCast::from(2).unwrap();
+            *y_max = center_y + diff_y / NumCast::from(2).unwrap();
         },
         Ordering::Greater => {
             let diff_x = (*x_max - *x_min) * ratio;
-            let center_x = (*x_max - *x_min) / 2.0 + *x_min;
-            *x_min = center_x - diff_x / 2.0;
-            *x_max = center_x + diff_x / 2.0;
+            let center_x = (*x_max - *x_min) / NumCast::from(2).unwrap() + *x_min;
+            *x_min = center_x - diff_x / NumCast::from(2).unwrap();
+            *x_max = center_x + diff_x / NumCast::from(2).unwrap();
         },
         Ordering::Equal => {}
     };
