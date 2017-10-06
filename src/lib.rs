@@ -20,19 +20,20 @@ mod errors {
 
 pub fn fit_to_ratio<F: Float>(ratio: F, x_min: &mut F, x_max: &mut F, y_min: &mut F, y_max: &mut F) -> Result<()> {
     let view_ratio = (*x_max - *x_min) / (*y_max - *y_min);
+    let two = NumCast::from(2).unwrap();
 
     match ratio.partial_cmp(&view_ratio).chain_err(|| "problem with view and/or screen coordinates")? {
         Ordering::Less => {
             let diff_y = (*y_max - *y_min) / ratio;
-            let center_y = (*y_max - *y_min) / NumCast::from(2).unwrap() + *y_min;
-            *y_min = center_y - diff_y / NumCast::from(2).unwrap();
-            *y_max = center_y + diff_y / NumCast::from(2).unwrap();
+            let center_y = (*y_max - *y_min) / two + *y_min;
+            *y_min = center_y - diff_y / two;
+            *y_max = center_y + diff_y / two;
         },
         Ordering::Greater => {
             let diff_x = (*x_max - *x_min) * ratio;
-            let center_x = (*x_max - *x_min) / NumCast::from(2).unwrap() + *x_min;
-            *x_min = center_x - diff_x / NumCast::from(2).unwrap();
-            *x_max = center_x + diff_x / NumCast::from(2).unwrap();
+            let center_x = (*x_max - *x_min) / two + *x_min;
+            *x_min = center_x - diff_x / two;
+            *x_max = center_x + diff_x / two;
         },
         Ordering::Equal => {}
     };
