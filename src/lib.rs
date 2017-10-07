@@ -142,11 +142,12 @@ pub fn gen_buddhabrot_metropolis(size_x: usize, size_y:usize, x_min: f64, x_max:
     //let seed: &[_] = &[1, 2, 3, 4];
     //let mut rng: StdRng = SeedableRng::from_seed(seed);
 
-    const STD_DEV: f32 = 0.005;
+    let std_dev = (x_max - x_min) / 10.0;
     let mut max = 0u32;
     let mut last_score = 0u32;
     let mut last_c = Complex::new((rng.gen::<f64>()-0.5)*4f64, (rng.gen::<f64>()-0.5)*4f64);
     let mut c;
+    let mut num_try_outside_viewport: u32 = 0;
     'main_loop: for _ in 0..num_sample {
         
         if last_score == 0 {
@@ -217,8 +218,10 @@ pub fn gen_buddhabrot_metropolis(size_x: usize, size_y:usize, x_min: f64, x_max:
                         if new > max {
                             max = new;
                         }
-                        image[coord_y as usize * size_x + coord_x as usize] = new;
-                        score += 10000;
+                        if i > min_iteration {
+                            image[coord_y as usize * size_x + coord_x as usize] = new;
+                        }
+                        score += 1;
                     }
 
                     // trace the symetric on axe x
@@ -228,8 +231,10 @@ pub fn gen_buddhabrot_metropolis(size_x: usize, size_y:usize, x_min: f64, x_max:
                         if new > max {
                             max = new;
                         }
-                        image[coord_y as usize * size_x + coord_x as usize] = new;
-                        score += 10000;
+                        if i > min_iteration {
+                            image[coord_y as usize * size_x + coord_x as usize] = new;
+                        }
+                        score += 1;
                     }
                 }
 				
@@ -237,12 +242,23 @@ pub fn gen_buddhabrot_metropolis(size_x: usize, size_y:usize, x_min: f64, x_max:
                 j+=1;
 			}
 
-            score += j;
+            if last_score == 0 {
+                // searching for orbits crossing the viewport
+                num_try_outside_viewport += 1;
+            } else {
+                // exploring an area containing orbits crossing the viewport
+                num_try_outside_viewport -= 1;
+            }
 
             if score >= last_score || score as f64 / last_score as f64 > rng.gen(){
                 last_c = c;
                 last_score = score;
             }
+ 
+            if num_try_outside_viewport == 0 {
+                last_score = 0;
+            }
+            
 
             
 		}
