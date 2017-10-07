@@ -42,13 +42,13 @@ pub fn fit_to_ratio<F: Float>(ratio: F, x_min: &mut F, x_max: &mut F, y_min: &mu
 }
 
 
-pub fn gen_buddhabrot(size_x: usize, size_y:usize, x_min: f32, x_max:f32, y_min: f32, y_max: f32, min_iteration: u32, max_iteration: u32, num_sample: u32, image: &mut [u32]) -> Result<(u32)> {
+pub fn gen_buddhabrot(size_x: usize, size_y:usize, x_min: f32, x_max:f32, y_min: f32, y_max: f32, min_iteration: u32, max_iteration: u32, num_sample: u32, image: &mut [u16]) -> Result<(u16)> {
     let mut rng = rand::thread_rng();
     //let seed: &[_] = &[1, 2, 3, 4];
     //let mut rng: StdRng = SeedableRng::from_seed(seed);
 
 
-    let mut max = 0u32;
+    let mut max = 0u16;
 
     'main_loop: for _ in 0..num_sample {
         // generate a complex from a uniform rectangular distribution covering the mandelbrot set
@@ -137,13 +137,13 @@ pub fn gen_buddhabrot(size_x: usize, size_y:usize, x_min: f32, x_max:f32, y_min:
     return Ok(max);
 }
 
-pub fn gen_buddhabrot_metropolis(size_x: usize, size_y:usize, x_min: f64, x_max:f64, y_min: f64, y_max: f64, min_iteration: u32, max_iteration: u32, num_sample: u32, image: &mut [u32]) -> Result<(u32)> {
+pub fn gen_buddhabrot_metropolis(size_x: usize, size_y:usize, x_min: f64, x_max:f64, y_min: f64, y_max: f64, min_iteration: u32, max_iteration: u32, num_sample: u32, image: &mut [u16]) -> Result<(u16)> {
     let mut rng = rand::thread_rng();
     //let seed: &[_] = &[1, 2, 3, 4];
     //let mut rng: StdRng = SeedableRng::from_seed(seed);
 
     let std_dev = (x_max - x_min) / 10.0;
-    let mut max = 0u32;
+    let mut max = 0u16;
     let mut last_score = 0u32;
     let mut last_c = Complex::new((rng.gen::<f64>()-0.5)*4f64, (rng.gen::<f64>()-0.5)*4f64);
     let mut c;
