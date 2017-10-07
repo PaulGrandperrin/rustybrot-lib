@@ -238,9 +238,8 @@ pub fn gen_buddhabrot_metropolis(size_x: usize, size_y:usize, x_min: f64, x_max:
                     }
                 }
 				
-                z = z*z + c;
-                j+=1;
-			}
+                z = z*z + c;			
+            }
 
             if last_score == 0 {
                 // searching for orbits crossing the viewport
