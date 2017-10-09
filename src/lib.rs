@@ -512,3 +512,233 @@ pub fn gen_buddhabrot_metropolis_color(size_x: usize, size_y:usize, x_min: f64, 
     return Ok(());
 }
 
+
+pub fn gen_buddhabrot_metropolis_gravity_color(size_x: usize, size_y:usize, x_min: f64, x_max:f64, y_min: f64, y_max: f64, red_min_iteration: u32, red_max_iteration: u32, green_min_iteration: u32, green_max_iteration: u32, blue_min_iteration: u32, blue_max_iteration: u32, num_sample: u32, image: &mut [u16]) -> Result<()> {
+    let mut rng = rand::thread_rng();
+    //let seed: &[_] = &[1, 2, 3, 4];
+    //let mut rng: StdRng = SeedableRng::from_seed(seed);
+    let max_iteration = red_max_iteration.max(green_max_iteration).max(blue_max_iteration);
+    let std_dev = (x_max - x_min).min(y_max - y_min) / 8.0;
+    let mut last_sum_attraction = 0f64;
+    let mut last_c = Complex::new((rng.gen::<f64>()-0.5)*4f64, (rng.gen::<f64>()-0.5)*4f64);
+    let mut c;
+    'main_loop: for _ in 0..num_sample {
+        c = Complex::new(((rng.gen::<StandardNormal>().0 as f64 * std_dev) + last_c.re).min(2.0).max(-2.0), ((rng.gen::<StandardNormal>().0 as f64 * std_dev) + last_c.im).min(2.0).max(-2.0));
+
+        // check if c is in the cardioid || in the period-2 bulb
+        let c_im_powi_2 = c.im.powi(2);
+        let q = (c.re-0.25).powi(2)+ c_im_powi_2;
+        if q*(q+(c.re-0.25)) < 0.25 * c_im_powi_2 || (c.re + 1.0).powi(2) + c_im_powi_2 < 0.0625{
+            continue;
+        }
+
+        // find out if c is in the mandelbrot set
+        let mut z = Complex::new(0f64,0f64);
+        let mut i = 0u32;
+        let mut escaped: bool = false;
+        
+        while i < std::cmp::min(max_iteration, 2000) {
+            z = z*z + c;
+            i += 1;
+            if (z.re*z.re+z.im*z.im) >= 4f64 {escaped = true; break}
+        }
+
+        if i == max_iteration {continue}
+
+        if !escaped {
+            'fix_sized_outer_loop: while i <= max_iteration - 4000 {
+                let old_z = z;
+                for j in 0..4000 {
+                    z = z*z + c;
+                    if z == old_z {continue 'main_loop}
+                    if (z.re*z.re+z.im*z.im) >= 4f64 {
+                        escaped = true;
+                        i += j;
+                        break 'fix_sized_outer_loop
+                    }
+                }
+                i += 4000;
+            }
+        }
+
+        if i == max_iteration {continue}
+
+        if !escaped {
+            while i < max_iteration {
+                z = z*z + c;
+                i += 1;
+            }
+            if (z.re*z.re+z.im*z.im) >= 4f64 {escaped = true}
+        }
+        
+
+        // if c escaped before max_iteration (therefore is NOT in the mandelbrot set)
+        if escaped {
+            // retrace the path of z
+            z = c;
+            let mut sum_attraction = 0f64;
+            let mut barycentre_x = 0f64;
+            let mut barycentre_y = 0f64;
+            let center_x = x_max - x_min;
+            let center_y = y_max - y_min;
+            while (z.re*z.re+z.im*z.im) < 4f64 {
+                // red
+                trace_complex64(z, i, size_x, size_y, x_min, x_max, y_min, y_max, red_min_iteration, red_max_iteration, image, 3, 0);
+                // green
+                trace_complex64(z, i, size_x, size_y, x_min, x_max, y_min, y_max, green_min_iteration, green_max_iteration, image, 3, 1);
+                // blue
+                trace_complex64(z, i, size_x, size_y, x_min, x_max, y_min, y_max, blue_min_iteration, blue_max_iteration, image, 3, 2);
+                
+                //sum_attraction += ((z.re - center_x).powi(2) + (z.im - center_y).powi(2)).powf(-0.5);
+                //sum_attraction += 1.0/((z.re - center_x).powi(2) + (z.im - center_y).powi(2));
+                barycentre_x += z.re;
+                barycentre_y += z.im; 
+                z = z*z + c;
+            }
+
+            barycentre_x /= i as f64;
+            barycentre_y /= i as f64;
+
+            sum_attraction = ((barycentre_x - center_x).powi(2) + (barycentre_y - center_y).powi(2)).powf(-0.5);
+
+            //sum_attraction = sum_attraction.sqrt();
+
+            if sum_attraction >= last_sum_attraction || sum_attraction as f64 / last_sum_attraction as f64 > rng.gen(){
+                last_c = c;
+                last_sum_attraction = sum_attraction;
+            }
+   
+        }
+    }
+
+    return Ok(());
+}
+
+pub fn gen_buddhabrot_metropolis_gravity2_color(size_x: usize, size_y:usize, x_min: f64, x_max:f64, y_min: f64, y_max: f64, red_min_iteration: u32, red_max_iteration: u32, green_min_iteration: u32, green_max_iteration: u32, blue_min_iteration: u32, blue_max_iteration: u32, num_sample: u32, image: &mut [u16]) -> Result<()> {
+    let mut rng = rand::thread_rng();
+    //let seed: &[_] = &[1, 2, 3, 4];
+    //let mut rng: StdRng = SeedableRng::from_seed(seed);
+    let max_iteration = red_max_iteration.max(green_max_iteration).max(blue_max_iteration);
+    let std_dev = (x_max - x_min) / 4.0;
+    let mut last_score = 0u32;
+    let mut last_sum_attraction = 0f64;
+    let mut last_c = Complex::new((rng.gen::<f64>()-0.5)*4f64, (rng.gen::<f64>()-0.5)*4f64);
+    let mut c;
+    let mut num_try_outside_viewport: u32 = 0;
+    'main_loop: for _ in 0..num_sample {
+        
+
+        c = Complex::new(((rng.gen::<StandardNormal>().0 as f64 * std_dev) + last_c.re).min(2.0).max(-2.0), ((rng.gen::<StandardNormal>().0 as f64 * std_dev) + last_c.im).min(2.0).max(-2.0));
+        
+
+        // check if c is in the cardioid || in the period-2 bulb
+        let c_im_powi_2 = c.im.powi(2);
+        let q = (c.re-0.25).powi(2)+ c_im_powi_2;
+        if q*(q+(c.re-0.25)) < 0.25 * c_im_powi_2 || (c.re + 1.0).powi(2) + c_im_powi_2 < 0.0625{
+            continue;
+        }
+
+        // find out if c is in the mandelbrot set
+        let mut z = Complex::new(0f64,0f64);
+        let mut i = 0u32;
+        let mut escaped: bool = false;
+        
+        while i < std::cmp::min(max_iteration, 2000) {
+            z = z*z + c;
+            i += 1;
+            if (z.re*z.re+z.im*z.im) >= 4f64 {escaped = true; break}
+        }
+
+        if i == max_iteration {continue}
+
+        if !escaped {
+            'fix_sized_outer_loop: while i <= max_iteration - 4000 {
+                let old_z = z;
+                for j in 0..4000 {
+                    z = z*z + c;
+                    if z == old_z {continue 'main_loop}
+                    if (z.re*z.re+z.im*z.im) >= 4f64 {
+                        escaped = true;
+                        i += j;
+                        break 'fix_sized_outer_loop
+                    }
+                }
+                i += 4000;
+            }
+        }
+
+        if i == max_iteration {continue}
+
+        if !escaped {
+            while i < max_iteration {
+                z = z*z + c;
+                i += 1;
+            }
+            if (z.re*z.re+z.im*z.im) >= 4f64 {escaped = true}
+        }
+        
+
+        // if c escaped before max_iteration (therefore is NOT in the mandelbrot set)
+        if escaped {
+            // retrace the path of z
+            z = c;
+            let mut score = 0u32;
+            let mut sum_attraction = 0f64;
+            let center_x = x_max - x_min;
+            let center_y = y_max - y_min;
+
+            if last_score == 0 {
+                // searching for orbits crossing the viewport
+                while (z.re*z.re+z.im*z.im) < 4f64 {
+                    // red
+                    score += trace_complex64(z, i, size_x, size_y, x_min, x_max, y_min, y_max, red_min_iteration, red_max_iteration, image, 3, 0);
+                    // green
+                    score += trace_complex64(z, i, size_x, size_y, x_min, x_max, y_min, y_max, green_min_iteration, green_max_iteration, image, 3, 1);
+                    // blue
+                    score += trace_complex64(z, i, size_x, size_y, x_min, x_max, y_min, y_max, blue_min_iteration, blue_max_iteration, image, 3, 2);
+                    
+                    sum_attraction += 1.0/((z.re - center_x).powi(2) + (z.im - center_y).powi(2));
+                    //sum_attraction += 1.0/((z.re - center_x).powi(2) + (z.im - center_y).powi(2));
+                    z = z*z + c;
+                }
+                if sum_attraction >= last_sum_attraction || sum_attraction as f64 / last_sum_attraction as f64 > rng.gen() || score != 0{
+                    last_c = c;
+                    last_sum_attraction = sum_attraction;
+                }
+                if score != 0  {
+                    last_score = score;
+                    last_sum_attraction = 0.0;
+                }
+                num_try_outside_viewport += 1;
+            } else {
+                // exploring an area containing orbits crossing the viewport
+                while (z.re*z.re+z.im*z.im) < 4f64 {
+                    // red
+                    score += trace_complex64(z, i, size_x, size_y, x_min, x_max, y_min, y_max, red_min_iteration, red_max_iteration, image, 3, 0);
+                    // green
+                    score += trace_complex64(z, i, size_x, size_y, x_min, x_max, y_min, y_max, green_min_iteration, green_max_iteration, image, 3, 1);
+                    // blue
+                    score += trace_complex64(z, i, size_x, size_y, x_min, x_max, y_min, y_max, blue_min_iteration, blue_max_iteration, image, 3, 2);
+                    
+                    z = z*z + c;            
+                }
+                if score >= last_score || score as f64 / last_score as f64 > rng.gen(){
+                    last_c = c;
+                    last_score = score;
+                }
+                num_try_outside_viewport -= 1;
+            }
+
+ 
+            if num_try_outside_viewport == 0 {
+                last_score = 0;
+                last_c = Complex::new((rng.gen::<f64>()-0.5)*4f64, (rng.gen::<f64>()-0.5)*4f64);
+            }
+            
+
+            
+        }
+    }
+
+    return Ok(());
+}
