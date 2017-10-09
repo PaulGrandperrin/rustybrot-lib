@@ -266,7 +266,7 @@ pub fn gen_buddhabrot_metropolis(size_x: usize, size_y:usize, x_min: f64, x_max:
     return Ok(max);
 }
 
-#[inline]
+#[inline(always)]
 fn trace_complex32(z:Complex<f32>, i: u32, size_x: usize, size_y:usize, x_min: f32, x_max:f32, y_min: f32, y_max: f32, min_iteration: u32, max_iteration: u32, image: &mut [u16], nb_color: usize, color_offset: usize) -> u32 {
     let mut score = 0;
     let coord_x = ((z.re-x_min)/(x_max-x_min)*size_x as f32) as i32;
@@ -296,7 +296,7 @@ fn trace_complex32(z:Complex<f32>, i: u32, size_x: usize, size_y:usize, x_min: f
     return score;
 }
 
-#[inline]
+#[inline(always)]
 fn trace_complex64(z:Complex<f64>, i: u32, size_x: usize, size_y:usize, x_min: f64, x_max:f64, y_min: f64, y_max: f64, min_iteration: u32, max_iteration: u32, image: &mut [u16], nb_color: usize, color_offset: usize) -> u32 {
     let mut score = 0;
     let coord_x = ((z.re-x_min)/(x_max-x_min)*size_x as f64) as i32;
