@@ -41,6 +41,52 @@ pub fn fit_to_ratio<F: Float>(ratio: F, x_min: &mut F, x_max: &mut F, y_min: &mu
     Ok(())
 }
 
+pub fn compose(cumulated_result: &mut [u16], compositor_result: &mut [u8]) {    
+
+    let mut min = std::f32::MAX;
+    let mut max = std::f32::MIN;
+    for i in cumulated_result.iter() {
+        let n = *i as f32;
+        if n > max {max = n}
+        if n < min {min = n}
+    }
+    max = max.sqrt();
+    min = min.sqrt();
+    let dyn_range = max - min; 
+    let nmax = max - dyn_range * 0.4;
+    let nmin = min + dyn_range * 0.01;
+    let ndyn_range = nmax - nmin;
+
+    let intensity_regularization =  |intensity: u16| -> u8 {
+        let mut intensity = intensity as f32;
+
+        // compress
+        intensity = intensity.sqrt();
+        // saturate
+        intensity = nmin.max(nmax.min(intensity));
+        // calibrate
+        intensity = intensity - nmin;
+        // scale
+        intensity = intensity / ndyn_range;
+        // smoothstep
+        //intensity = intensity*intensity*(3-intensity*2);
+        // smootherstep
+        intensity = intensity*intensity*intensity*(intensity*(intensity*6.0-15.0)+10.0);
+
+
+        return (intensity*256.0) as u8;
+    };
+
+    for i in 0..cumulated_result.len()/3 {
+            compositor_result[i*4+0] = intensity_regularization(cumulated_result[i*3+0]); // red
+            compositor_result[i*4+1] = intensity_regularization(cumulated_result[i*3+1]); // green
+            compositor_result[i*4+2] = intensity_regularization(cumulated_result[i*3+2]); // blue
+            compositor_result[i*4+3] = 255;      // alpha
+    }
+
+}
+
+
 
 pub fn gen_buddhabrot(size_x: usize, size_y:usize, x_min: f32, x_max:f32, y_min: f32, y_max: f32, min_iteration: u32, max_iteration: u32, num_sample: u32, image: &mut [u16]) -> Result<(u16)> {
     let mut rng = rand::thread_rng();
